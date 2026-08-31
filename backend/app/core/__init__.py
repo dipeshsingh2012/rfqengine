@@ -1,1 +1,1 @@
-# Package marker
+# Makes the core directory a package
