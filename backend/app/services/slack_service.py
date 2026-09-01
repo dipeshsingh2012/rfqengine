@@ -1,43 +1,45 @@
 import logging
 import httpx
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
 
 class SlackService:
-    """Service to handle outgoing Slack notifications via Webhooks."""
+    """Service to handle sending notifications to Slack via Webhooks."""
 
-    def __init__(self, webhook_url: str, timeout: float = 5.0):
-        if not webhook_url.startswith("https://hooks.slack.com/"):
-            raise ValueError("Invalid Slack webhook URL")
+    def __init__(self, client: httpx.AsyncClient, webhook_url: str):
+        self.client = client
         self.webhook_url = webhook_url
-        self.timeout = timeout
 
-    async def send_notification(self, message: str, payload: Optional[Dict[str, Any]] = None) -> bool:
+    async def send_notification(self, message: str) -> bool:
         """
-        Sends a message to the configured Slack webhook.
+        Sends a text message to the configured Slack webhook.
         
-        Args:
-            message: The text content of the notification.
-            payload: Optional additional JSON payload for Slack blocks/attachments.
-            
         Returns:
-            bool: True if successful, False otherwise.
+            bool: True if successful, False if an error occurred.
         """
-        data = {"text": message}
-        if payload:
-            data.update(payload)
+        if not self.webhook_url:
+            logger.error("Slack webhook URL is not configured.")
+            return False
 
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(self.webhook_url, json=data)
-                response.raise_for_status()
-                return True
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Slack API returned error status: {e.response.status_code} - {e.response.text}")
-        except httpx.RequestError as e:
-            logger.error(f"Slack network error occurred: {str(e)}")
-        except Exception as e:
-            logger.error(f"Unexpected error sending Slack notification: {str(e)}")
-        
-        return False
+            payload: Dict[str, Any] = {"text": message}
+            response = await self.client.post(
+                self.webhook_url, 
+                json=payload,
+                timeout=10.0
+            )
+            
+            # raise_for_status is a SYNCHRONOUS method in httpx
+            response.raise_for_status()
+            return True
+
+        except httpx.HTTPStatusError as exc:
+            logger.error(f"Slack API returned error status: {exc.response.status_code} - {exc}")
+            return False
+        except httpx.RequestError as exc:
+            logger.error(f"Network error occurred while contacting Slack: {exc}")
+            return False
+        except Exception as exc:
+            logger.error(f"Unexpected error in SlackService: {exc}")
+            return False
