@@ -1,12 +1,21 @@
 import pytest
-from httpx import AsyncClient
-from app.main import app
+from typing import Any, Dict
 
-@pytest.mark.asyncio
-async def test_health_check():
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await ac.get("/health")
-    
+def test_health_endpoint(client) -> None:
+    """
+    Verifies that the health check endpoint returns a 200 status and correct structure.
+    """
+    response = client.get("/api/v1/health")
     assert response.status_code == 200
-    # The test expects 'RFQ Engine' as per the failure log
-    assert response.json() == {"service": "RFQ Engine", "status": "ok"}
+    
+    data: Dict[str, Any] = response.json()
+    assert data["status"] == "ok"
+    assert "project" in data
+
+def test_root_endpoint(client) -> None:
+    """
+    Verifies the root endpoint is reachable.
+    """
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.json() == {"message": "Welcome to RFQ Engine API"}

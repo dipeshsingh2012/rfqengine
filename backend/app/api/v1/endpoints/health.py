@@ -6,9 +6,10 @@ router = APIRouter()
 @router.get("/health")
 async def health_check():
     """
-    Returns the health status of the service.
+    Simple health check endpoint to verify service availability.
     """
     return {
-        "service": settings.SERVICE_NAME,
-        "status": "ok"
+        "status": "ok",
+        "project": settings.PROJECT_NAME,
+        "version": "1.0.0"
     }

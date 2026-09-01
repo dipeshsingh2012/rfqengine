@@ -6,14 +6,6 @@ from app.main import app
 def client():
     """
     Provides a TestClient instance for the FastAPI application.
-    Scoped to 'module' to improve test performance.
     """
     with TestClient(app) as c:
         yield c
-
-@pytest.fixture
-def app_instance():
-    """
-    Returns the FastAPI app instance.
-    """
-    return app
