@@ -1,11 +1,25 @@
 from fastapi import FastAPI
-from app.api.v1.endpoints import search, webhook, document, email, health
+from app.api.v1.api import api_router
 
-app = FastAPI(title="Audit API")
+def create_app() -> FastAPI:
+    """
+    Factory function to create the FastAPI application.
+    Ensures all routers are correctly mounted under the /api/v1 prefix.
+    """
+    app = FastAPI(
+        title="Autonomous Agentic Fleet API",
+        version="1.0.0",
+        docs_url="/docs",
+        openapi_url="/openapi.json"
+    )
 
-# Register routers
-app.include_router(health.router, prefix="/api/v1")
-app.include_router(search.router, prefix="/api/v1")
-app.include_router(webhook.router, prefix="/api/v1")
-app.include_router(document.router, prefix="/api/v1")
-app.include_router(email.router, prefix="/api/v1")
+    # Include the central API router which aggregates all feature routers
+    app.include_router(api_router, prefix="/api/v1")
+
+    @app.get("/health", tags=["System"])
+    async def health_check():
+        return {"status": "healthy"}
+
+    return app
+
+app = create_app()

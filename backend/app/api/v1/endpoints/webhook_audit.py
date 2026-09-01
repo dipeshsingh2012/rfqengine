@@ -23,7 +23,22 @@ async def record_webhook_audit(
         )
     return await webhook_audit_service.log_event(log)
 
-@router.get("/export", response_class=StreamingResponse)
+@router.get("/{log_id}", response_model=WebhookAuditLog)
+async def get_webhook_audit_log(
+    log_id: str,
+    x_tenant_id: str = Header(..., alias="X-Tenant-ID")
+):
+    """Fetch a specific audit log with strict tenant isolation."""
+    log = await webhook_audit_service.get_log_by_id(log_id, x_tenant_id)
+    if not log:
+        # We return 404 to avoid leaking existence of logs in other tenants
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Audit log not found."
+        )
+    return log
+
+@router.get("/export/csv", response_class=StreamingResponse)
 async def export_webhook_audit_stream(
     event_type: Optional[str] = Query(None),
     x_tenant_id: str = Header(..., alias="X-Tenant-ID")
@@ -37,7 +52,6 @@ async def export_webhook_audit_stream(
         )
 
     logs = await webhook_audit_service.get_audit_logs(tenant_id=x_tenant_id, event_type=event_type)
-    
     filename = f"webhook_audit_{sanitized_tenant}.csv"
     
     return StreamingResponse(

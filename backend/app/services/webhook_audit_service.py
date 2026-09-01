@@ -1,9 +1,7 @@
 import csv
 import io
 import re
-from typing import Any, AsyncGenerator, Dict, Iterator, List, Optional
-from datetime import datetime
-
+from typing import Any, Dict, Iterator, List, Optional
 from app.models.webhook_audit import WebhookAuditLog
 
 def sanitize_csv_cell(value: Any) -> str:
@@ -21,7 +19,7 @@ def sanitize_filename_part(part: str) -> str:
 
 class WebhookAuditService:
     def __init__(self):
-        # In-memory store for demonstration / testing purposes
+        # In-memory store for demonstration. In production, this would be a DB.
         self._storage: List[WebhookAuditLog] = []
 
     async def log_event(self, log: WebhookAuditLog) -> WebhookAuditLog:
@@ -35,6 +33,14 @@ class WebhookAuditService:
             log for log in self._storage
             if log.tenant_id == tenant_id and (not event_type or log.event_type == event_type)
         ]
+
+    async def get_log_by_id(self, log_id: str, tenant_id: str) -> Optional[WebhookAuditLog]:
+        for log in self._storage:
+            if log.id == log_id:
+                if log.tenant_id != tenant_id:
+                    return None  # Isolation breach attempt
+                return log
+        return None
 
     def generate_audit_csv_chunks(self, logs: List[WebhookAuditLog]) -> Iterator[str]:
         """Memory-efficient streaming generator that yields CSV rows incrementally."""
