@@ -1,19 +1,15 @@
 from fastapi import FastAPI
 from app.core.config import settings
+from app.api.v1 import health
 
-def create_application() -> FastAPI:
-    """
-    Factory function to create the FastAPI application instance.
-    """
-    app = FastAPI(
-        title=settings.app_name,
-        openapi_url=f"{settings.api_v1_prefix}/openapi.json",
-        docs_url="/docs",
-        redoc_url="/redoc"
-    )
-    
-    # Add middleware, routers, and exception handlers here
-    
-    return app
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+)
 
-app = create_application()
+# Include routers with the correct prefix from settings
+app.include_router(health.router, prefix=f"{settings.API_V1_STR}/health", tags=["health"])
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the RFQ Engine API"}
