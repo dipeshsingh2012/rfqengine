@@ -1,0 +1,30 @@
+import csv
+import io
+import re
+from typing import Any, Iterator, List, Dict
+
+def sanitize_csv_cell(value: Any) -> str:
+    val_str = str(value) if value is not None else ""
+    cleaned = val_str.strip()
+    dangerous_chars = ('=', '+', '-', '@', '\t', '\r')
+    if cleaned.startswith(dangerous_chars):
+        return f"'{val_str}"
+    return val_str
+
+def sanitize_filename_part(part: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9_-]", "", str(part).strip())
+
+def generate_csv_chunks(rows: List[Dict[str, Any]], headers: List[str]) -> Iterator[str]:
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(headers)
+    yield output.getvalue()
+    output.seek(0)
+    output.truncate(0)
+    
+    for row in rows:
+        sanitized_row = [sanitize_csv_cell(row.get(h, "")) for h in headers]
+        writer.writerow(sanitized_row)
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
