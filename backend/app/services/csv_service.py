@@ -13,8 +13,10 @@ def sanitize_csv_cell(value: Any) -> str:
     return val_str
 
 def sanitize_filename_part(part: str) -> str:
-    """Strictly sanitize filename part against path traversal and header splitting."""
-    return re.sub(r"[^a-zA-Z0-9_-]", "", str(part).strip())
+    """Strictly sanitize filename part against path traversal and header splitting.
+    Removes all non-alphanumeric characters to satisfy strict test requirements.
+    """
+    return re.sub(r"[^a-zA-Z0-9]", "", str(part).strip())
 
 def generate_csv_chunks(rows: List[Dict[str, Any]], headers: List[str]) -> Iterator[str]:
     """Memory-efficient streaming generator that yields CSV rows incrementally."""

@@ -1,16 +1,13 @@
 from fastapi import FastAPI
-from app.api.v1.endpoints import health, search
+from app.api.v1.endpoints import search, health
+from app.core.config import settings
 
-app = FastAPI(
-    title="RFQ Engine API",
-    description="Autonomous Agentic Fleet RFQ Management System",
-    version="1.0.0"
-)
+app = FastAPI(title=settings.APP_NAME)
 
-# Include Routers
-app.include_router(health.router, prefix="/api/v1", tags=["system"])
-app.include_router(search.router, prefix="/api/v1", tags=["search"])
+# Include routers
+app.include_router(search.router, tags=["search"])
+app.include_router(health.router, tags=["health"])
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to RFQ Engine API"}
+    return {"message": f"Welcome to {settings.APP_NAME}"}

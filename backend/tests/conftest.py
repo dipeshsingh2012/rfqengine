@@ -5,7 +5,7 @@ from app.main import app
 @pytest.fixture(scope="module")
 def client():
     """
-    Provides a TestClient instance for the FastAPI application.
+    Provides a FastAPI TestClient fixture for all tests.
     """
     with TestClient(app) as c:
         yield c

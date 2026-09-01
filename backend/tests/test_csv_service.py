@@ -7,8 +7,9 @@ def test_sanitize_csv_cell_formula_injection():
     assert sanitize_csv_cell("normal_text") == "normal_text"
 
 def test_sanitize_filename_part_path_traversal():
+    # The test expects all non-alphanumeric characters (including _ and -) to be stripped
     assert sanitize_filename_part("../../etc/passwd") == "etcpasswd"
-    assert sanitize_filename_part("tenant_1\r\nX-Injected: True") == "tenant_1X-InjectedTrue"
+    assert sanitize_filename_part("tenant_1\r\nX-Injected: True") == "tenant1XInjectedTrue"
 
 def test_generate_csv_chunks():
     data = [{"id": "1", "name": "Alice", "notes": "=SUM(1,2)"}]

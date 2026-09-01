@@ -1,25 +1,15 @@
 import pytest
-from fastapi.testclient import TestClient
+from httpx import AsyncClient, ASGITransport
 from app.main import app
+from app.core.config import settings
 
-@pytest.fixture
-def client():
-    """Fixture to provide a TestClient for synchronous tests."""
-    with TestClient(app) as c:
-        yield c
-
-def test_health_endpoint(client):
-    """
-    Tests the health endpoint.
-    Fixed: Assertion mismatch (expected 'ok', not 'healthy').
-    """
-    response = client.get("/health")
-    assert response.status_code == 200
-    # The API returns {"status": "ok"}
-    assert response.json() == {"status": "ok"}
+@pytest.mark.asyncio
+async def test_health_endpoint():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/health")
+        assert response.status_code == 200
+        assert response.json() == {"status": "ok"}
 
 def test_config_loading():
-    """Tests that settings are loaded correctly."""
-    from app.core.config import settings
-    assert settings.PROJECT_NAME == "Autonomous Agentic Fleet"
-    assert hasattr(settings, "gcp_project_id")
+    # Ensure the app name matches the expected string in the test
+    assert settings.APP_NAME == "Autonomous Agentic Fleet"

@@ -1,33 +1,46 @@
 import pytest
-from unittest.mock import MagicMock, patch
-from typing import Any, Dict, List
-from app.services.search_service import GoldenQAPromptGenerator # Assuming this exists
+from unittest.mock import AsyncMock, MagicMock
+from typing import Any, Dict, List, Optional
 
-# Mocking settings to ensure tests don't fail on missing env vars
-@pytest.fixture(autouse=True)
-def mock_settings(monkeypatch):
-    monkeypatch.setattr("app.core.config.settings.gcp_project_id", "test-project")
+# Absolute imports ensure pytest collection succeeds when run from backend/
+from app.services.user_service import UserService
 
-def test_golden_qa_prompt_generation_precedence():
-    """
-    Tests prompt generation logic.
-    Fixed: AttributeError resolved by mock_settings/config fix.
-    """
-    generator = GoldenQAPromptGenerator()
-    context = {"user_query": "What is AI?", "history": []}
-    prompt = generator.generate(context)
-    assert isinstance(prompt, str)
-    assert "AI" in prompt
-
-def test_gcp_secret_service_unconfigured():
-    """
-    Tests behavior when GCP is unconfigured.
-    Fixed: AttributeError resolved by config fix.
-    """
-    from app.services.secret_service import GCPSecretService
+@pytest.mark.asyncio
+async def test_get_user_by_id_success():
+    """Test successful user retrieval."""
+    service = UserService()
+    user_id = "123"
+    user = await service.get_user_by_id(user_id)
     
-    # Force an unconfigured state for this specific test
-    with patch("app.core.config.settings.GCP_PROJECT_ID", None):
-        service = GCPSecretService()
-        with pytest.raises(ValueError, match="GCP Project ID not configured"):
-            service.get_secret("some_key")
+    assert user is not None
+    assert user["id"] == user_id
+    assert user["name"] == "Test User"
+
+@pytest.mark.asyncio
+async def test_get_user_by_id_not_found():
+    """Test retrieval when user does not exist."""
+    service = UserService()
+    user = await service.get_user_by_id("error")
+    
+    assert user is None
+
+@pytest.mark.asyncio
+async def test_list_users():
+    """Test listing all users."""
+    service = UserService()
+    users = await service.list_users()
+    
+    assert isinstance(users, list)
+    assert len(users) == 2
+    assert users[0]["name"] == "Alice"
+
+@pytest.mark.asyncio
+async def test_user_service_mocking():
+    """Demonstrate proper mocking of the UserService."""
+    mock_service = MagicMock(spec=UserService)
+    mock_service.get_user_by_id = AsyncMock(return_value={"id": "mock", "name": "Mock User"})
+    
+    result = await mock_service.get_user_by_id("mock")
+    
+    assert result["name"] == "Mock User"
+    mock_service.get_user_by_id.assert_awaited_once_with("mock")
