@@ -1,5 +1,5 @@
 import pytest
-from app.core.config import settings
+from app.core.config import settings, get_settings
 
 def test_settings_project_name():
     """Verify that the project name is correctly loaded."""
@@ -12,4 +12,5 @@ def test_settings_tenant_header():
 def test_settings_defaults():
     """Verify default values are present."""
     assert isinstance(settings.DEBUG, bool)
+    assert settings.SECRET_KEY is not None
     assert "postgresql+asyncpg" in settings.DATABASE_URL

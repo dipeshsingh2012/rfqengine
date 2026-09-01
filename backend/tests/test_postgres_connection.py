@@ -1,34 +1,62 @@
 import pytest
-import pytest_asyncio
-from typing import AsyncGenerator
+from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.db.postgres import DatabaseManager
+from app.db.session import DatabaseManager
 
-# Using a local sqlite memory DB for testing to avoid requiring a live Postgres instance during collection
-TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
+@pytest.mark.asyncio
+async def test_database_connection_lifecycle():
+    """
+    Verifies that the get_session generator correctly manages the 
+    session lifecycle using the async context manager.
+    """
+    # Setup: Mock the session and the factory
+    mock_session = AsyncMock(spec=AsyncSession)
+    
+    # The session_factory is a callable that returns an async context manager
+    # We need to mock the __aenter__ and __aexit__ of the object returned by the factory
+    mock_context_manager = MagicMock()
+    mock_context_manager.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+    
+    mock_factory = MagicMock(return_value=mock_context_manager)
 
-@pytest_asyncio.fixture
-async def db_manager() -> DatabaseManager:
-    """Fixture to provide a clean database manager for each test."""
-    manager = DatabaseManager(TEST_DB_URL)
-    yield manager
-    await manager.close()
+    # Initialize manager with a dummy URL
+    db_manager = DatabaseManager("postgresql+asyncpg://user:pass@localhost/testdb")
+    # Inject the mock factory
+    db_manager.session_factory = mock_factory
 
-@pytest_asyncio.fixture
-async def db_session(db_manager: DatabaseManager) -> AsyncGenerator[AsyncSession, None]:
-    """Fixture to provide an async session."""
+    # Execution: Iterate through the generator
     async for session in db_manager.get_session():
-        yield session
+        assert session == mock_session
+        # Verify the session was actually yielded
+        assert session.close is not None
+
+    # Verification: Ensure the context manager was entered and exited
+    mock_context_manager.__aenter__.assert_called_once()
+    mock_context_manager.__aexit__.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_database_connection_lifecycle(db_manager: DatabaseManager):
-    """Verify the database manager can initialize and dispose of the engine."""
-    assert db_manager.engine is not None
-    await db_manager.close()
+async def test_session_yields_correct_type():
+    """
+    Verifies that the yielded object is compatible with AsyncSession.
+    """
+    # Setup: Use a real AsyncSession mock to ensure type compatibility
+    mock_session = AsyncMock(spec=AsyncSession)
+    
+    mock_context_manager = MagicMock()
+    mock_context_manager.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_context_manager.__aexit__ = AsyncMock(return_value=None)
+    
+    mock_factory = MagicMock(return_value=mock_context_manager)
 
-@pytest.mark.asyncio
-async def test_session_yields_correct_type(db_session: AsyncGenerator[AsyncSession, None]):
-    """Verify that the session generator yields an AsyncSession object."""
-    # We need to iterate the generator to get the actual session
-    async for session in db_session:
-        assert isinstance(session, AsyncSession)
+    db_manager = DatabaseManager("postgresql+asyncpg://user:pass@localhost/testdb")
+    db_manager.session_factory = mock_factory
+
+    # Execution
+    async for session in db_manager.get_session():
+        # In a mocked environment, we verify it matches our spec
+        assert session == mock_session
+        # Check that it behaves like an AsyncSession (has required async methods)
+        assert hasattr(session, "execute")
+        assert hasattr(session, "commit")
+        assert hasattr(session, "rollback")

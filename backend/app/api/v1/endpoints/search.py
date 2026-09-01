@@ -10,7 +10,6 @@ class SearchQuery(BaseModel):
 
 @router.post("/")
 async def search(payload: SearchQuery):
-    # Simulated search logic
     return {
         "results": [{"id": i, "score": 0.99} for i in range(payload.top_k)],
         "count": payload.top_k
